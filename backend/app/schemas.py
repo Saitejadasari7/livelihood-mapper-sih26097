@@ -47,3 +47,6 @@ class ProfileIn(BaseModel):
 
 class ProfileOut(ProfileIn):
     model_config = ConfigDict(from_attributes=True)
+    
+class SkillsIn(BaseModel):
+    skills: list[str]
