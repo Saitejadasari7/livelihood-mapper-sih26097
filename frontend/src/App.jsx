@@ -7,6 +7,8 @@ import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import VoiceAssistant from "./pages/VoiceAssistant.jsx";
+import Livelihoods from "./pages/Livelihoods.jsx";
+import Training from "./pages/Training.jsx";
 import ComingSoon from "./pages/ComingSoon.jsx";
 
 export default function App() {
@@ -21,9 +23,9 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/voice" element={<VoiceAssistant />} />
-          <Route path="/livelihood" element={<ComingSoon title="Livelihood Mapping" phase="Phase 6" description="Matching work options will appear here." />} />
-          <Route path="/skill-gap" element={<ComingSoon title="Skill Gap Analysis" phase="Phase 8" description="Existing and missing skills will appear here." />} />
-          <Route path="/training" element={<ComingSoon title="Training Opportunities" phase="Phase 7" description="Training and NSQF information will appear here." />} />
+          <Route path="/livelihood" element={<Livelihoods />} />
+          <Route path="/skill-gap" element={<Livelihoods />} />
+          <Route path="/training" element={<Training />} />
           <Route path="*" element={<ComingSoon title="Page not found" phase="n/a" description="This page does not exist." />} />
         </Routes>
       </main>

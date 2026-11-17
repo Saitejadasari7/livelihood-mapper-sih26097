@@ -3,9 +3,11 @@ import { Link, NavLink } from "react-router-dom";
 
 const links = [
   { to: "/", label: "Home", end: true },
-  { to: "/about", label: "About" },
   { to: "/voice", label: "Voice Assistant" },
   { to: "/dashboard", label: "Dashboard" },
+  { to: "/livelihood", label: "Pathways" },
+  { to: "/training", label: "NSQF Training" },
+  { to: "/about", label: "About" },
 ];
 
 export default function Navbar() {

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from . import models  # noqa: F401
 from .database import Base, engine
-from .routes import auth, profile, recommendations
+from .routes import auth, catalogue, profile, recommendations
 
 Base.metadata.create_all(engine)
 
@@ -18,6 +18,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(profile.router)
 app.include_router(recommendations.router)
+app.include_router(catalogue.router)
 
 
 @app.get("/api/health")
