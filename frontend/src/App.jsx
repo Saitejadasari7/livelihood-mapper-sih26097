@@ -15,7 +15,7 @@ export default function App() {
           <Route path="/about" element={<About />} />
           <Route path="/login" element={<ComingSoon title="Login" phase="Phase 4" description="Account login will be available after user management is built." />} />
           <Route path="/register" element={<ComingSoon title="Register" phase="Phase 4" description="Account creation will be available after user management is built." />} />
-          <Route path="/dashboard" element={<ComingSoon title="Dashboard" phase="Phase 2B" description="Your profile and recommendations will appear here." />} />
+          <Route path="/dashboard" element={<Dashboard.jsx />} />
           <Route path="/voice" element={<ComingSoon title="Voice Assistant" phase="Phase 5" description="Speak or type to build your profile. Coming soon." />} />
           <Route path="/livelihood" element={<ComingSoon title="Livelihood Mapping" phase="Phase 6" description="Matching work options will appear here." />} />
           <Route path="/skill-gap" element={<ComingSoon title="Skill Gap Analysis" phase="Phase 8" description="Existing and missing skills will appear here." />} />
@@ -27,3 +27,5 @@ export default function App() {
     </div>
   );
 }
+
+import Dashboard from "./pages/Dashboard.jsx";

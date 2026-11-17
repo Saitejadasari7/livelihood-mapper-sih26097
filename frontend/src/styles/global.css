@@ -105,3 +105,19 @@ h1, h2, h3 { line-height: 1.25; }
 /* Fix: keep button styling inside the navbar */
 .nav-links a.btn { padding: 10px 22px; color: #fff; }
 .nav-links a.btn-primary:hover { color: #fff; }
+
+/* Dashboard */
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.dash-head { margin-bottom: 24px; }
+.dash-head h1 { font-size: 2rem; }
+.row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.row:last-child { border-bottom: none; }
+.row span:first-child { color: var(--muted); }
+.tag { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: .9rem; font-weight: 600; margin: 0 8px 8px 0; }
+.tag-have { background: #dcfce7; color: #166534; }
+.tag-missing { background: #fee2e2; color: #991b1b; }
+.progress { height: 12px; background: var(--border); border-radius: 999px; overflow: hidden; margin: 8px 0; }
+.progress-bar { height: 100%; background: var(--primary); }
+.small { font-size: .9rem; color: var(--muted); }
+.stack > * + * { margin-top: 20px; }
+@media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
