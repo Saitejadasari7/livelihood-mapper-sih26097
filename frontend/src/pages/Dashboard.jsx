@@ -1,57 +1,200 @@
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import api from "../services/api.js";
 import ProfileCard from "../components/ProfileCard.jsx";
 import SkillCard from "../components/SkillCard.jsx";
 import RecommendationCard from "../components/RecommendationCard.jsx";
 
-// SAMPLE DATA for layout preview only. Replaced by real data in Phase 4 and later.
-const sample = {
-  profile: {
-    ageRange: "18-25",
-    state: "Andhra Pradesh",
-    district: "Sample district",
-    area: "Rural",
-    education: "Intermediate",
-    experience: "Fresher",
-    interest: "Computer-related work",
-    preference: "Employment",
-  },
-  have: ["Computer fundamentals", "Typing"],
-  missing: ["Spreadsheet operations", "Data handling"],
-  rec: {
-    title: "Data Entry Operator (illustrative example)",
-    why: "Your computer and typing skills overlap with this role's skills.",
-    training: "Not yet linked to a verified training program.",
-    nsqf: "NSQF mapping not yet verified.",
-    next: "To be added from a verified career path.",
-  },
+const emptyProfile = {
+  age_range: "18-25",
+  state: "",
+  district: "",
+  area_type: "Rural",
+  education_level: "Intermediate",
+  experience_level: "Fresher",
+  interest_sector: "Technology",
+  career_preference: "Employment",
 };
 
 export default function Dashboard() {
-  return (
-    <div className="page container">
-      <div className="dash-head">
+  const [user, setUser] = useState(null);
+  const [form, setForm] = useState(emptyProfile);
+  const [editing, setEditing] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    async function loadData() {
+      if (!localStorage.getItem("token")) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const [meRes, profRes] = await Promise.all([
+          api.get("/auth/me"),
+          api.get("/profile"),
+        ]);
+        setUser(meRes.data);
+        setForm({ ...emptyProfile, ...profRes.data });
+      } catch {
+        localStorage.removeItem("token");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  async function saveProfile(e) {
+    e.preventDefault();
+    setMsg("");
+    const res = await api.put("/profile", form);
+    setForm({ ...emptyProfile, ...res.data });
+    setEditing(false);
+    setMsg("Profile saved.");
+  }
+
+  function logout() {
+    localStorage.removeItem("token");
+    setUser(null);
+    navigate("/login");
+  }
+
+  if (loading) return <div className="page container"><p>Loading dashboard...</p></div>;
+
+  if (!user) {
+    return (
+      <div className="page container center">
         <h1>Your dashboard</h1>
-        <div className="notice" style={{ marginTop: 12 }}>
-          <strong>Sample preview.</strong> This is example data to show the
-          layout. Login and your real profile arrive in Phase 4, and
-          recommendations in Phase 6.
+        <p>Please log in or create an account to view and save your livelihood profile.</p>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 16 }}>
+          <Link to="/login" className="btn btn-primary">Login</Link>
+          <Link to="/register" className="btn btn-outline">Register</Link>
         </div>
       </div>
+    );
+  }
+
+  const cardProfile = {
+    ageRange: form.age_range || "Not set",
+    state: form.state || "State not set",
+    district: form.district || "District not set",
+    area: form.area_type || "Rural",
+    education: form.education_level || "Not set",
+    experience: form.experience_level || "Not set",
+    interest: form.interest_sector || "Not set",
+    preference: form.career_preference || "Not set",
+  };
+
+  return (
+    <div className="page container">
+      <div className="dash-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h1>Welcome, {user.full_name}</h1>
+          <p className="small">{user.email}</p>
+        </div>
+        <button onClick={logout} className="btn btn-outline">Logout</button>
+      </div>
+
+      {msg && <div className="alert-ok">{msg}</div>}
 
       <div className="grid grid-2">
         <div className="stack">
-          <ProfileCard profile={sample.profile} />
+          {!editing ? (
+            <>
+              <ProfileCard profile={cardProfile} />
+              <button onClick={() => setEditing(true)} className="btn btn-outline">Edit Profile</button>
+            </>
+          ) : (
+            <form className="card" onSubmit={saveProfile}>
+              <h3 style={{ marginBottom: 14 }}>Edit your profile</h3>
+              <div className="field">
+                <label>Age Range</label>
+                <select value={form.age_range || ""} onChange={(e) => setForm({ ...form, age_range: e.target.value })}>
+                  <option value="18-25">18-25</option>
+                  <option value="26-35">26-35</option>
+                  <option value="36-45">36-45</option>
+                  <option value="46+">46+</option>
+                </select>
+              </div>
+              <div className="field">
+                <label>State</label>
+                <input type="text" placeholder="e.g. Andhra Pradesh" value={form.state || ""} onChange={(e) => setForm({ ...form, state: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>District</label>
+                <input type="text" placeholder="e.g. Krishna" value={form.district || ""} onChange={(e) => setForm({ ...form, district: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>Area Type</label>
+                <select value={form.area_type || "Rural"} onChange={(e) => setForm({ ...form, area_type: e.target.value })}>
+                  <option value="Rural">Rural</option>
+                  <option value="Urban">Urban</option>
+                </select>
+              </div>
+              <div className="field">
+                <label>Education Level</label>
+                <select value={form.education_level || ""} onChange={(e) => setForm({ ...form, education_level: e.target.value })}>
+                  <option value="Below 10th">Below 10th</option>
+                  <option value="10th Pass">10th Pass</option>
+                  <option value="Intermediate">Intermediate (12th)</option>
+                  <option value="Diploma / ITI">Diploma / ITI</option>
+                  <option value="Graduate">Graduate</option>
+                </select>
+              </div>
+              <div className="field">
+                <label>Experience Level</label>
+                <select value={form.experience_level || ""} onChange={(e) => setForm({ ...form, experience_level: e.target.value })}>
+                  <option value="Fresher">Fresher</option>
+                  <option value="1-2 Years">1-2 Years</option>
+                  <option value="3+ Years">3+ Years</option>
+                </select>
+              </div>
+              <div className="field">
+                <label>Interest Sector</label>
+                <select value={form.interest_sector || ""} onChange={(e) => setForm({ ...form, interest_sector: e.target.value })}>
+                  <option value="Technology">Technology</option>
+                  <option value="Business">Business & Office</option>
+                  <option value="Agriculture">Agriculture</option>
+                  <option value="Healthcare">Healthcare</option>
+                </select>
+              </div>
+              <div className="field">
+                <label>Career Preference</label>
+                <select value={form.career_preference || ""} onChange={(e) => setForm({ ...form, career_preference: e.target.value })}>
+                  <option value="Employment">Wage Employment</option>
+                  <option value="Self-Employment">Self-Employment / Entrepreneurship</option>
+                  <option value="Apprenticeship">Apprenticeship / Training</option>
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button type="submit" className="btn btn-primary">Save Profile</button>
+                <button type="button" className="btn btn-outline" onClick={() => setEditing(false)}>Cancel</button>
+              </div>
+            </form>
+          )}
+
           <div className="card">
             <h3>Next step</h3>
-            <p>Talk to the assistant to build your profile.</p>
+            <p>Use the Voice Assistant to fill or update your profile by speaking.</p>
             <Link to="/voice" className="btn btn-primary" style={{ marginTop: 12 }}>
               Open Voice Assistant
             </Link>
           </div>
         </div>
+
         <div className="stack">
-          <RecommendationCard rec={sample.rec} />
-          <SkillCard have={sample.have} missing={sample.missing} />
+          <RecommendationCard
+            rec={{
+              title: "Recommendations engine arrives in Phase 6",
+              why: "Once your profile and skills are saved, our matching engine will rank livelihood pathways here.",
+              training: "Linked in Phase 7 from verified NSQF records.",
+              nsqf: "NSQF mapping not yet verified.",
+              next: "Complete your profile on the left first.",
+            }}
+          />
+          <SkillCard have={["Computer fundamentals", "Typing"]} missing={["Spreadsheet operations", "Data handling"]} />
         </div>
       </div>
     </div>

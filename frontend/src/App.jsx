@@ -3,6 +3,9 @@ import Navbar from "./components/Navbar.jsx";
 import Footer from "./components/Footer.jsx";
 import Home from "./pages/Home.jsx";
 import About from "./pages/About.jsx";
+import Login from "./pages/Login.jsx";
+import Register from "./pages/Register.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
 import ComingSoon from "./pages/ComingSoon.jsx";
 
 export default function App() {
@@ -13,8 +16,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
-          <Route path="/login" element={<ComingSoon title="Login" phase="Phase 4" description="Account login will be available after user management is built." />} />
-          <Route path="/register" element={<ComingSoon title="Register" phase="Phase 4" description="Account creation will be available after user management is built." />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/voice" element={<ComingSoon title="Voice Assistant" phase="Phase 5" description="Speak or type to build your profile. Coming soon." />} />
           <Route path="/livelihood" element={<ComingSoon title="Livelihood Mapping" phase="Phase 6" description="Matching work options will appear here." />} />
@@ -27,5 +30,3 @@ export default function App() {
     </div>
   );
 }
-
-import Dashboard from "./pages/Dashboard.jsx";
