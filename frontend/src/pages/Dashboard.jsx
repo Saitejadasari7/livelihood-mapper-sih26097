@@ -19,40 +19,44 @@ const emptyProfile = {
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [form, setForm] = useState(emptyProfile);
+  const [recs, setRecs] = useState([]);
   const [editing, setEditing] = useState(false);
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    async function loadData() {
-      if (!localStorage.getItem("token")) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const [meRes, profRes] = await Promise.all([
-          api.get("/auth/me"),
-          api.get("/profile"),
-        ]);
-        setUser(meRes.data);
-        setForm({ ...emptyProfile, ...profRes.data });
-      } catch {
-        localStorage.removeItem("token");
-      } finally {
-        setLoading(false);
-      }
+  async function loadDashboard() {
+    if (!localStorage.getItem("token")) {
+      setLoading(false);
+      return;
     }
-    loadData();
+    try {
+      const [meRes, profRes, recRes] = await Promise.all([
+        api.get("/auth/me"),
+        api.get("/profile"),
+        api.get("/recommendations"),
+      ]);
+      setUser(meRes.data);
+      setForm({ ...emptyProfile, ...profRes.data });
+      setRecs(recRes.data.recommendations || []);
+    } catch {
+      localStorage.removeItem("token");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadDashboard();
   }, []);
 
   async function saveProfile(e) {
     e.preventDefault();
     setMsg("");
-    const res = await api.put("/profile", form);
-    setForm({ ...emptyProfile, ...res.data });
+    await api.put("/profile", form);
+    await loadDashboard();
     setEditing(false);
-    setMsg("Profile saved.");
+    setMsg("Profile saved and recommendations updated.");
   }
 
   function logout() {
@@ -185,16 +189,25 @@ export default function Dashboard() {
         </div>
 
         <div className="stack">
-          <RecommendationCard
-            rec={{
-              title: "Recommendations engine arrives in Phase 6",
-              why: "Once your profile and skills are saved, our matching engine will rank livelihood pathways here.",
-              training: "Linked in Phase 7 from verified NSQF records.",
-              nsqf: "NSQF mapping not yet verified.",
-              next: "Complete your profile on the left first.",
-            }}
-          />
-          <SkillCard have={["Computer fundamentals", "Typing"]} missing={["Spreadsheet operations", "Data handling"]} />
+          {recs.length > 0 ? (
+            <>
+              <RecommendationCard
+                rec={{
+                  title: `${recs[0].title} (Match Score: ${recs[0].score}/100)`,
+                  why: recs[0].why,
+                  training: recs[0].training,
+                  nsqf: recs[0].nsqf,
+                  next: recs[0].next,
+                }}
+              />
+              <SkillCard have={recs[0].have_skills} missing={recs[0].missing_skills} />
+            </>
+          ) : (
+            <div className="card">
+              <h3>No recommendations yet</h3>
+              <p>Use the Voice Assistant or Edit Profile to set your skills and sector.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
