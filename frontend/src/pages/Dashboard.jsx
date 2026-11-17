@@ -140,11 +140,12 @@ export default function Dashboard() {
               <div className="field">
                 <label>Education Level</label>
                 <select value={form.education_level || ""} onChange={(e) => setForm({ ...form, education_level: e.target.value })}>
-                  <option value="Below 10th">Below 10th</option>
-                  <option value="10th Pass">10th Pass</option>
-                  <option value="Intermediate">Intermediate (12th)</option>
-                  <option value="Diploma / ITI">Diploma / ITI</option>
-                  <option value="Graduate">Graduate</option>
+                  <option value="Class 5-8">Class 5–8 / Basic Literacy (NSQF 1–2)</option>
+                  <option value="10th Pass">Class 9–10 Pass (NSQF 3–4)</option>
+                  <option value="Intermediate">Class 11–12 / Intermediate (NSQF 3–4)</option>
+                  <option value="Diploma / ITI">Diploma / ITI / UG Year 1–2 (NSQF 5–6)</option>
+                  <option value="Graduate">Bachelor’s Degree (NSQF 7–8)</option>
+                  <option value="Postgraduate / Ph.D.">Master’s / Ph.D. (NSQF 9–10)</option>
                 </select>
               </div>
               <div className="field">
@@ -159,6 +160,10 @@ export default function Dashboard() {
                 <label>Interest Sector</label>
                 <select value={form.interest_sector || ""} onChange={(e) => setForm({ ...form, interest_sector: e.target.value })}>
                   <option value="Technology">Technology</option>
+                  <option value="Retail">Retail</option>
+                  <option value="Construction">Construction</option>
+                  <option value="Green Jobs">Green Jobs</option>
+                  <option value="Manufacturing">Manufacturing</option>
                   <option value="Business">Business & Office</option>
                   <option value="Agriculture">Agriculture</option>
                   <option value="Healthcare">Healthcare</option>
@@ -193,7 +198,7 @@ export default function Dashboard() {
             <>
               <RecommendationCard
                 rec={{
-                  title: `${recs[0].title} (Match Score: ${recs[0].score}/100)`,
+                  title: `${recs[0].title} [${recs[0].nsqf_levels || "NSQF"}] (Match Score: ${recs[0].score}/100)`,
                   why: recs[0].why,
                   training: recs[0].training,
                   nsqf: recs[0].nsqf,

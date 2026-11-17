@@ -7,12 +7,36 @@ from .. import models
 
 EDU_RANK = {
     "Below 10th": 1,
+    "Class 5-8": 1,
     "10th Pass": 2,
     "Intermediate": 3,
-    "Diploma / ITI": 3,
-    "Graduate": 4,
+    "Diploma / ITI": 4,
+    "Graduate": 5,
+    "Postgraduate / Ph.D.": 6,
 }
 
+def get_nsqf_tier_info(edu_or_level) -> dict:
+    if isinstance(edu_or_level, int):
+        if edu_or_level <= 2:
+            return {"levels": "Levels 1–2", "tier": "Foundational / Entry", "benchmark": "Class 5–8 / Basic Literacy"}
+        if edu_or_level <= 4:
+            return {"levels": "Levels 3–4", "tier": "Semi-Skilled to Skilled", "benchmark": "Class 9–12 / ITI Certificate"}
+        if edu_or_level <= 6:
+            return {"levels": "Levels 5–6", "tier": "Supervisory / Technical", "benchmark": "Diploma / Undergraduate Year 1–2"}
+        if edu_or_level <= 8:
+            return {"levels": "Levels 7–8", "tier": "Managerial / Specialized", "benchmark": "Bachelor’s / Postgraduate Degree"}
+        return {"levels": "Levels 9–10", "tier": "Strategic / Research", "benchmark": "Master’s / Ph.D."}
+
+    rank = EDU_RANK.get(edu_or_level or "", 2)
+    mapping = {
+        1: {"levels": "Levels 1–2", "tier": "Foundational / Entry", "benchmark": "Class 5–8 / Basic Literacy"},
+        2: {"levels": "Levels 3–4", "tier": "Semi-Skilled to Skilled", "benchmark": "Class 9–12 / ITI Certificate"},
+        3: {"levels": "Levels 3–4", "tier": "Semi-Skilled to Skilled", "benchmark": "Class 9–12 / ITI Certificate"},
+        4: {"levels": "Levels 5–6", "tier": "Supervisory / Technical", "benchmark": "Diploma / Undergraduate Year 1–2"},
+        5: {"levels": "Levels 7–8", "tier": "Managerial / Specialized", "benchmark": "Bachelor’s / Postgraduate Degree"},
+        6: {"levels": "Levels 9–10", "tier": "Strategic / Research", "benchmark": "Master’s / Ph.D."},
+    }
+    return mapping[rank]
 
 def compute_recommendations(user: models.User, db: Session) -> list[dict]:
     profile = user.profile
@@ -22,7 +46,6 @@ def compute_recommendations(user: models.User, db: Session) -> list[dict]:
     if not livelihoods:
         return []
 
-    # Build TF-IDF corpus from livelihood descriptions + sectors + required skills
     docs = [
         f"{l.title} {l.sector or ''} {l.description or ''} {' '.join(s.name for s in l.required_skills)}"
         for l in livelihoods
@@ -46,46 +69,52 @@ def compute_recommendations(user: models.User, db: Session) -> list[dict]:
         sims = cosine_similarity(matrix[-1], matrix[:-1]).flatten()
         tfidf_scores = [float(s) for s in sims]
 
+    matched_programs = db.scalars(select(models.TrainingProgram)).all()
     results = []
+
     for idx, liv in enumerate(livelihoods):
         req_skills = [s.name for s in liv.required_skills]
         have_skills = [s for s in req_skills if s in user_skill_names]
         missing_skills = [s for s in req_skills if s not in user_skill_names]
 
-        # 1. Skill overlap score (0 to 45 pts)
+        # 1. Skill overlap (0 to 45 pts)
         skill_ratio = (len(have_skills) / len(req_skills)) if req_skills else 0.0
         skill_pts = round(skill_ratio * 45, 1)
 
-        # 2. Sector match score (0 to 25 pts)
+        # 2. Sector match (0 to 25 pts)
         sector_pts = 0.0
         if profile and profile.interest_sector and liv.sector:
             if profile.interest_sector.lower() == liv.sector.lower():
                 sector_pts = 25.0
 
-        # 3. Education eligibility score (0 to 15 pts)
+        # 3. Education / NSQF benchmark fit (0 to 15 pts)
         edu_pts = 10.0
         if profile and profile.education_level and liv.suggested_min_education:
             u_rank = EDU_RANK.get(profile.education_level, 2)
             r_rank = EDU_RANK.get(liv.suggested_min_education, 2)
-            edu_pts = 15.0 if u_rank >= r_rank else 5.0
+            if u_rank == r_rank:
+                edu_pts = 15.0
+            elif u_rank > r_rank:
+                edu_pts = 11.0
+            else:
+                edu_pts = 4.0
 
-        # 4. TF-IDF semantic similarity score (0 to 15 pts)
+        # 4. TF-IDF semantic similarity (0 to 15 pts)
         tfidf_pts = round(tfidf_scores[idx] * 15, 1)
-
         total_score = round(skill_pts + sector_pts + edu_pts + tfidf_pts, 1)
 
-        # Check linked NSQF qualifications & training programs (verified only)
-        matched_programs = db.scalars(select(models.TrainingProgram)).all()
         nsqf_text = "NSQF mapping not yet verified."
         training_text = "Not yet linked to a verified training program."
+        tier_info = get_nsqf_tier_info(liv.suggested_min_education)
 
         for prog in matched_programs:
             prog_skills = {s.name for s in prog.skills}
-            if prog_skills & set(req_skills):
+            if prog_skills and len(prog_skills & set(req_skills)) >= 2:
                 training_text = f"{prog.title} ({prog.provider}, {prog.duration or 'Duration N/A'})"
                 if prog.qualification and prog.qualification.verified:
                     q = prog.qualification
-                    nsqf_text = f"NSQF Level {q.nsqf_level} — {q.name} (Code: {q.code})"
+                    tier_info = get_nsqf_tier_info(q.nsqf_level)
+                    nsqf_text = f"NSQF Level {q.nsqf_level} ({tier_info['tier']}) — {q.name} [Code: {q.code}]"
                 break
 
         reasons = []
@@ -93,10 +122,12 @@ def compute_recommendations(user: models.User, db: Session) -> list[dict]:
             reasons.append(f"Matches {len(have_skills)}/{len(req_skills)} skills ({', '.join(have_skills)})")
         if sector_pts > 0:
             reasons.append(f"Aligns with your {liv.sector} sector interest")
+        if edu_pts >= 15.0:
+            reasons.append(f"Direct match for {tier_info['levels']} ({tier_info['benchmark']})")
         if tfidf_pts > 0:
-            reasons.append(f"Text similarity boost (+{tfidf_pts} pts)")
+            reasons.append(f"TF-IDF semantic boost (+{tfidf_pts} pts)")
         if not reasons:
-            reasons.append("Entry-level pathway compatible with your profile")
+            reasons.append(f"Compatible with {tier_info['levels']} ({tier_info['tier']})")
 
         results.append(
             {
@@ -105,6 +136,9 @@ def compute_recommendations(user: models.User, db: Session) -> list[dict]:
                 "sector": liv.sector,
                 "description": liv.description,
                 "suggested_min_education": liv.suggested_min_education,
+                "nsqf_levels": tier_info["levels"],
+                "competency_tier": tier_info["tier"],
+                "academic_benchmark": tier_info["benchmark"],
                 "score": total_score,
                 "breakdown": {
                     "skills": skill_pts,
@@ -127,7 +161,6 @@ def compute_recommendations(user: models.User, db: Session) -> list[dict]:
 
     results.sort(key=lambda x: x["score"], reverse=True)
 
-    # Persist top recommendations to database
     db.query(models.Recommendation).filter(models.Recommendation.user_id == user.id).delete()
     for item in results:
         db.add(
@@ -139,5 +172,4 @@ def compute_recommendations(user: models.User, db: Session) -> list[dict]:
             )
         )
     db.commit()
-
     return results

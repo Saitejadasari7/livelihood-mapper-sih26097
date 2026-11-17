@@ -1,5 +1,10 @@
 title,sector,description,suggested_min_education,required_skills
-Data Entry Operator,Technology,Enters and updates information in computer systems,Intermediate,Computer fundamentals;Typing;Spreadsheet operations;Data handling
-Computer Operator,Technology,Operates computers for routine office and data tasks,Intermediate,Computer fundamentals;Typing;Email and internet use;Spreadsheet operations
-Office Assistant,Business,Supports daily office work such as records and coordination,Intermediate,Filing and record keeping;Communication;Computer fundamentals;Time management
-Customer Support Associate,Business,Answers customer questions by phone or chat,Intermediate,Communication;Customer handling;Computer fundamentals;Typing
+Retail Trainee,Retail,"Entry-level store support assisting with billing counters, shelf restocking, and customer guidance (NSQF Levels 1-2 Foundational Tier).",Below 10th,Customer handling;Basic numeracy;Stock arrangement;Communication
+Assistant Mason,Construction,"Entry-level building and civil construction support performing bricklaying, mortar mixing, and site safety tasks (NSQF Levels 1-2 Foundational Tier).",Below 10th,Measurement and leveling;Bricklaying basics;Workplace safety
+Data Entry Operator,Technology,"Back-office computer operator handling digital forms, spreadsheets, and database verification (NSQF Levels 3-4 Skilled Tier).",10th Pass,Computer fundamentals;Typing;Spreadsheet operations;Data handling
+Solar PV Installer,Green Jobs,"Field technician installing, wiring, and testing rooftop and ground-mounted solar panels (NSQF Levels 3-4 Skilled Tier).",10th Pass,Electrical basics;Solar panel mounting;Safety compliance;Site testing
+Junior Engineer,Construction,"Supervisory site engineer overseeing blueprints, material quality, and technician teams (NSQF Levels 5-6 Supervisory Tier).",Diploma / ITI,AutoCAD reading;Site supervision;Quality inspection;Project reporting
+Retail Store Supervisor,Retail,"Floor supervisor managing daily store sales, inventory audits, and sales staff schedules (NSQF Levels 5-6 Supervisory Tier).",Diploma / ITI,Inventory management;Team supervision;POS billing;Customer handling
+AI / Data Analyst,Technology,"Specialized analyst building predictive models, SQL pipelines, and business intelligence dashboards (NSQF Levels 7-8 Managerial Tier).",Graduate,Python programming;Data analysis;Machine learning basics;SQL queries
+Production Lead,Manufacturing,"Operations lead optimizing factory throughput, lean workflows, and quality assurance (NSQF Levels 7-8 Managerial Tier).",Graduate,Lean manufacturing;Quality assurance;Team leadership;Process optimization
+Principal Engineer / Policy Architect,Technology,"Strategic R&D leader architecting national-scale AI systems, technical standards, and research programs (NSQF Levels 9-10 Strategic Tier).",Postgraduate / Ph.D.,System architecture;AI governance;Research methodology;Technical leadership

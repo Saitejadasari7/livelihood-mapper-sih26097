@@ -1,199 +1,239 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api.js";
-import { LANGUAGES, QUESTIONS, extractAnswer } from "../utils/voiceParser.js";
+import { parseAnswer } from "../utils/voiceParser.js";
+import { LANGUAGES, useLanguage } from "../context/LanguageContext.jsx";
 
 export default function VoiceAssistant() {
+  const { lang, changeLang, currentLangObj, t } = useLanguage();
   const [step, setStep] = useState(0);
-  const [lang, setLang] = useState("en-IN");
-  const [messages, setMessages] = useState([{ sender: "bot", text: QUESTIONS[0].prompt }]);
   const [input, setInput] = useState("");
   const [listening, setListening] = useState(false);
-  const [statusMsg, setStatusMsg] = useState("");
-  const [answers, setAnswers] = useState({});
-  const [matchedSkills, setMatchedSkills] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [profileData, setProfileData] = useState({
+    state: "",
+    district: "",
+    area_type: "Rural",
+    education_level: "Intermediate",
+    experience_level: "Fresher",
+    interest_sector: "Technology",
+    career_preference: "Employment",
+    skills: [],
+  });
+  const [messages, setMessages] = useState([]);
   const recognitionRef = useRef(null);
   const navigate = useNavigate();
 
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const questions = t.voiceQuestions;
 
-  function speak(text) {
+  useEffect(() => {
+    setMessages([{ sender: "bot", text: questions[0] }]);
+    setStep(0);
+  }, [lang]);
+
+  function speakText(text) {
     if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = lang;
+    utter.lang = currentLangObj.speechCode;
     window.speechSynthesis.speak(utter);
   }
 
-  useEffect(() => {
-    speak(QUESTIONS[0].prompt);
-  }, []);
-
   function startListening() {
+    setError("");
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
     if (!SpeechRecognition) {
-      setStatusMsg("Voice recognition is not supported in this browser. Please use Chrome/Edge or type below.");
+      setError("Speech recognition is not supported in this browser. Please type your answer below.");
       return;
     }
-    setStatusMsg("");
-    const rec = new SpeechRecognition();
-    rec.lang = lang;
-    rec.interimResults = false;
-    rec.maxAlternatives = 1;
 
-    rec.onstart = () => setListening(true);
-    rec.onend = () => setListening(false);
-    rec.onerror = (e) => {
+    const recognition = new SpeechRecognition();
+    recognition.lang = currentLangObj.speechCode;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onerror = (e) => {
       setListening(false);
-      setStatusMsg(`Microphone issue (${e.error}). You can type your answer below instead.`);
+      setError(`Microphone error (${e.error}). You can type your answer below.`);
     };
-    rec.onresult = (e) => {
-      const transcript = e.results[0][0].transcript;
-      processUserInput(transcript);
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      handleAnswer(transcript);
     };
 
-    recognitionRef.current = rec;
-    rec.start();
+    recognitionRef.current = recognition;
+    recognition.start();
   }
 
-  function processUserInput(rawText) {
-    const clean = rawText.trim();
-    if (!clean) return;
+  function handleAnswer(rawText) {
+    const text = rawText.trim();
+    if (!text) return;
 
-    const currentQ = QUESTIONS[step];
-    const parsed = extractAnswer(currentQ.key, clean);
-
-    const updatedAnswers = { ...answers };
-    let updatedSkills = [...matchedSkills];
-
-    if (currentQ.key === "skills") {
-      updatedSkills = parsed;
-      setMatchedSkills(parsed);
-    } else if (currentQ.key === "location") {
-      updatedAnswers.district = parsed.district;
-      updatedAnswers.state = parsed.state;
-      updatedAnswers.area_type = parsed.area_type;
-    } else {
-      updatedAnswers[currentQ.key] = parsed;
-    }
-    setAnswers(updatedAnswers);
-
-    const nextMessages = [...messages, { sender: "user", text: clean }];
-    const nextStep = step + 1;
-
-    if (nextStep < QUESTIONS.length) {
-      const nextPrompt = QUESTIONS[nextStep].prompt;
-      nextMessages.push({ sender: "bot", text: nextPrompt });
-      setMessages(nextMessages);
-      setStep(nextStep);
-      speak(nextPrompt);
-    } else {
-      const doneText = "Thank you! I have captured your profile and skills. Review below and click Save to Dashboard.";
-      nextMessages.push({ sender: "bot", text: doneText });
-      setMessages(nextMessages);
-      setStep(nextStep);
-      speak(doneText);
-    }
+    const updatedMessages = [...messages, { sender: "user", text }];
+    const parsed = parseAnswer(step, text, profileData);
+    setProfileData(parsed);
     setInput("");
+
+    const nextStep = step + 1;
+    if (nextStep < questions.length) {
+      const nextQ = questions[nextStep];
+      updatedMessages.push({ sender: "bot", text: nextQ });
+      setMessages(updatedMessages);
+      setStep(nextStep);
+      speakText(nextQ);
+    } else {
+      const doneMsg =
+        "All 6 questions completed! Click 'Save to Profile & View Dashboard' below to see your NSQF matches.";
+      updatedMessages.push({ sender: "bot", text: doneMsg });
+      setMessages(updatedMessages);
+      setStep(nextStep);
+      speakText(doneMsg);
+    }
   }
 
-  async function saveToProfile() {
+  async function saveAndFinish() {
     if (!localStorage.getItem("token")) {
       navigate("/login");
       return;
     }
     setSaving(true);
+    setError("");
     try {
       await api.put("/profile", {
-        age_range: "18-25",
-        ...answers,
+        state: profileData.state,
+        district: profileData.district,
+        area_type: profileData.area_type,
+        education_level: profileData.education_level,
+        experience_level: profileData.experience_level,
+        interest_sector: profileData.interest_sector,
+        career_preference: profileData.career_preference,
       });
-      if (matchedSkills.length) {
-        await api.put("/profile/skills", { skills: matchedSkills });
-      }
       navigate("/dashboard");
     } catch {
-      setStatusMsg("Could not save profile. Please make sure you are logged in.");
+      setError("Could not save profile. Please make sure you are logged in.");
     } finally {
       setSaving(false);
     }
   }
 
-  function restart() {
-    setStep(0);
-    setAnswers({});
-    setMatchedSkills([]);
-    setMessages([{ sender: "bot", text: QUESTIONS[0].prompt }]);
-    speak(QUESTIONS[0].prompt);
-  }
-
   return (
     <div className="page container">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
-        <h1>Voice & Text Assistant</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h1>{t.navVoice}</h1>
+          <p className="small">
+            Language: <strong>{currentLangObj.native} ({currentLangObj.speechCode})</strong> • Question{" "}
+            {Math.min(step + 1, questions.length)} of {questions.length}
+          </p>
+        </div>
+
         <select
+          aria-label="Voice Language"
           value={lang}
-          onChange={(e) => setLang(e.target.value)}
-          style={{ padding: "8px 14px", borderRadius: 10, border: "1px solid var(--border)" }}
+          onChange={(e) => changeLang(e.target.value)}
+          style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontWeight: 600 }}
         >
-          {Object.values(LANGUAGES).map((l) => (
-            <option key={l.code} value={l.code}>{l.label}</option>
+          {LANGUAGES.map((l) => (
+            <option key={l.code} value={l.code}>
+              {l.native} ({l.label})
+            </option>
           ))}
         </select>
       </div>
 
-      {!SpeechRecognition && (
-        <div className="notice" style={{ marginBottom: 16 }}>
-          Browser speech-to-text works best in Google Chrome or Microsoft Edge. Text input works in all browsers.
+      {error && (
+        <div className="card" style={{ borderColor: "#fca5a5", background: "#fef2f2", color: "#991b1b", marginTop: 14 }}>
+          {error}
         </div>
       )}
-      {statusMsg && <div className="alert-err">{statusMsg}</div>}
 
-      <div className="chat-box">
-        {messages.map((m, idx) => (
-          <div key={idx} className={`msg ${m.sender === "bot" ? "msg-bot" : "msg-user"}`}>
+      <div className="card stack" style={{ marginTop: 18, maxHeight: 380, overflowY: "auto" }}>
+        {messages.map((m, i) => (
+          <div
+            key={i}
+            style={{
+              alignSelf: m.sender === "user" ? "flex-end" : "flex-start",
+              background: m.sender === "user" ? "#2563eb" : "#f1f5f9",
+              color: m.sender === "user" ? "#ffffff" : "#0f172a",
+              padding: "10px 14px",
+              borderRadius: 12,
+              maxWidth: "80%",
+            }}
+          >
             {m.text}
           </div>
         ))}
       </div>
 
-      {step < QUESTIONS.length ? (
-        <form
-          className="voice-controls"
-          onSubmit={(e) => {
-            e.preventDefault();
-            processUserInput(input);
-          }}
-        >
-          <button
-            type="button"
-            className={`btn btn-mic ${listening ? "listening" : ""}`}
-            onClick={startListening}
-          >
-            {listening ? "Listening..." : "Speak Answer"}
-          </button>
-          <input
-            type="text"
-            placeholder="Or type your answer here..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-          />
-          <button type="submit" className="btn btn-primary">Send</button>
-        </form>
-      ) : (
-        <div className="card">
-          <h3>Extracted Profile Summary</h3>
-          <p><strong>Education:</strong> {answers.education_level}</p>
-          <p><strong>Skills:</strong> {matchedSkills.join(", ")}</p>
-          <p><strong>Sector:</strong> {answers.interest_sector}</p>
-          <p><strong>Experience:</strong> {answers.experience_level}</p>
-          <p><strong>Preference:</strong> {answers.career_preference}</p>
-          <p><strong>Location:</strong> {answers.district}, {answers.state} ({answers.area_type})</p>
-          <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
-            <button onClick={saveToProfile} className="btn btn-primary" disabled={saving}>
-              {saving ? "Saving..." : "Save to Profile & View Dashboard"}
+      {step < questions.length ? (
+        <div className="card" style={{ marginTop: 16 }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={startListening}
+              disabled={listening}
+            >
+              {listening ? t.listening : `🎙️ ${t.speakAnswer}`}
             </button>
-            <button onClick={restart} className="btn btn-outline">Start Over</button>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => speakText(questions[step])}
+            >
+              🔊 Replay Question
+            </button>
+          </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleAnswer(input);
+            }}
+            style={{ display: "flex", gap: 10, marginTop: 12 }}
+          >
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Or type your answer here..."
+              style={{ flex: 1 }}
+            />
+            <button type="submit" className="btn btn-primary">
+              {t.send}
+            </button>
+          </form>
+        </div>
+      ) : (
+        <div className="card" style={{ marginTop: 16 }}>
+          <h3>Extracted Profile Summary</h3>
+          <p>
+            <strong>Location:</strong> {profileData.district || "—"}, {profileData.state || "—"} ({profileData.area_type})
+          </p>
+          <p>
+            <strong>Education:</strong> {profileData.education_level} • <strong>Experience:</strong> {profileData.experience_level}
+          </p>
+          <p>
+            <strong>Sector & Preference:</strong> {profileData.interest_sector} ({profileData.career_preference})
+          </p>
+          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+            <button className="btn btn-primary" onClick={saveAndFinish} disabled={saving}>
+              {saving ? "Saving..." : t.saveProfile}
+            </button>
+            <button
+              className="btn btn-outline"
+              onClick={() => {
+                setStep(0);
+                setMessages([{ sender: "bot", text: questions[0] }]);
+              }}
+            >
+              Restart
+            </button>
           </div>
         </div>
       )}

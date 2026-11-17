@@ -1,5 +1,10 @@
 name,code,nsqf_level,sector,job_role,entry_requirements,training_requirements,source,last_verified
-Domestic Data Entry Operator,SSC/Q2212,4,IT-ITeS,Data Entry Operator,10th / 12th Pass,400 hours classroom + practical,https://www.nqr.gov.in,2026-11-17
-Junior Software Developer / Computer Operator,SSC/Q0508,4,IT-ITeS,Computer Operator,12th Pass / Diploma,400 hours classroom + lab,https://www.nqr.gov.in,2026-11-17
-Office Assistant / Executive,MEP/Q0202,4,Management & Entrepreneurship,Office Assistant,12th Pass,360 hours classroom + OJT,https://www.nqr.gov.in,2026-11-17
-Customer Care Executive (Voice / Non-Voice),SSC/Q2210,4,IT-ITeS,Customer Support Associate,10th / 12th Pass,300 hours classroom + roleplay,https://www.nqr.gov.in,2026-11-17
+Retail Trainee Associate,RAS/Q0103,2,Retail,Retail Trainee,Class 5-8 / Basic Literacy,200 hours classroom + store OJT,https://www.nqr.gov.in,2026-11-17
+Assistant Mason,CON/Q0102,2,Construction,Assistant Mason,Class 5-8 / Basic Literacy,250 hours practical + site training,https://www.nqr.gov.in,2026-11-17
+Domestic Data Entry Operator,SSC/Q2212,4,Technology,Data Entry Operator,Class 9-12 / ITI Certificate,400 hours classroom + practical,https://www.nqr.gov.in,2026-11-17
+Solar PV Installer (Suryamitra),SGJ/Q0101,4,Green Jobs,Solar PV Installer,Class 9-12 / ITI Certificate,300 hours classroom + lab,https://www.nqr.gov.in,2026-11-17
+Junior Engineer - Civil / Mechanical,CON/Q0604,6,Construction,Junior Engineer,Diploma / UG Year 1-2,500 hours technical + field OJT,https://www.nqr.gov.in,2026-11-17
+Retail Store Supervisor,RAS/Q0105,6,Retail,Retail Store Supervisor,Diploma / UG Year 1-2,450 hours supervisory + OJT,https://www.nqr.gov.in,2026-11-17
+AI and Data Analyst,SSC/Q8104,8,Technology,AI/Data Analyst,Bachelor's / Postgraduate Degree,600 hours lab + capstone project,https://www.nqr.gov.in,2026-11-17
+Production and Operations Lead,ISC/Q0903,8,Manufacturing,Production Lead,Bachelor's / Postgraduate Degree,550 hours industrial + lean management,https://www.nqr.gov.in,2026-11-17
+Principal R&D Engineer / Policy Architect,SSC/Q8402,10,Technology,Principal Engineer,Master's / Ph.D.,Research fellowship + strategic architecture,https://www.nqr.gov.in,2026-11-17
