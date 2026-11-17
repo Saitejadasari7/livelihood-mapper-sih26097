@@ -101,3 +101,7 @@ h1, h2, h3 { line-height: 1.25; }
   }
   .nav-links.open { display: flex; }
 }
+
+/* Fix: keep button styling inside the navbar */
+.nav-links a.btn { padding: 10px 22px; color: #fff; }
+.nav-links a.btn-primary:hover { color: #fff; }
