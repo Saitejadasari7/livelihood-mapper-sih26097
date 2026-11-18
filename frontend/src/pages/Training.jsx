@@ -1,35 +1,68 @@
 import { useEffect, useState } from "react";
 import api from "../services/api.js";
+import { useLanguage } from "../context/LanguageContext.jsx";
+import { translateDuration, translateMeta, translateTerm } from "../utils/dataTranslations.js";
 
 export default function Training() {
+  const { lang, t } = useLanguage();
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get("/training").then((res) => {
-      setPrograms(res.data);
-      setLoading(false);
-    });
+    api
+      .get("/training")
+      .then((res) => {
+        setPrograms(res.data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="page container"><p>Loading NSQF catalogue...</p></div>;
+  if (loading) {
+    return (
+      <div className="page container">
+        <p>Loading NSQF catalogue...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="page container">
-      <h1>NSQF-Aligned Training Catalogue</h1>
-      <p>Verified qualification packs and training programs mapped from official NQR & Skill India records.</p>
+      <h1>{t.trainingTitle}</h1>
+      <p>{t.trainingSub}</p>
+
       <div className="grid grid-2" style={{ marginTop: 24 }}>
         {programs.map((p) => (
           <div className="card" key={p.id}>
-            <span className="badge" style={{ background: "#dcfce7", color: "#166534" }}>
-              {p.nsqf.verified ? `NSQF Level ${p.nsqf.level} • ${p.nsqf.code}` : "NSQF mapping not yet verified"}
+            <span
+              className="badge"
+              style={{ background: "#dcfce7", color: "#166534", fontWeight: 600 }}
+            >
+              {p.nsqf.verified
+                ? `${translateMeta("NSQF Level", lang)} ${p.nsqf.level} • ${p.nsqf.code}`
+                : "NSQF mapping not yet verified"}
             </span>
-            <h3>{p.title}</h3>
-            <p><strong>Provider:</strong> {p.provider} ({p.mode}, {p.duration})</p>
-            <p style={{ marginTop: 8 }}><strong>Qualification:</strong> {p.nsqf.name || "Unverified"}</p>
-            <p style={{ marginTop: 8 }}><strong>Skills covered:</strong> {p.skills.join(", ")}</p>
+
+            <h3 style={{ marginTop: 10 }}>{translateTerm(p.title, lang)}</h3>
+
+            <p style={{ marginTop: 6 }}>
+              <strong>{t.providerLabel}:</strong> {p.provider} (
+              {translateTerm(p.mode, lang)}, {translateDuration(p.duration, lang)})
+            </p>
+
+            <p style={{ marginTop: 8 }}>
+              <strong>{t.qualificationLabel}:</strong>{" "}
+              {p.nsqf.name ? translateTerm(p.nsqf.name, lang) : "Unverified"}
+            </p>
+
+            <p style={{ marginTop: 8 }}>
+              <strong>{t.skillsCoveredLabel}:</strong>{" "}
+              {p.skills.map((s) => translateTerm(s, lang)).join(", ")}
+            </p>
+
             <p className="small" style={{ marginTop: 10 }}>
-              Verified on {p.last_verified} • Source: {p.source}
+              {translateMeta("Verified on", lang)} {p.last_verified} •{" "}
+              {translateMeta("Source", lang)}: {p.source}
             </p>
           </div>
         ))}

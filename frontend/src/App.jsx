@@ -9,6 +9,8 @@ import Dashboard from "./pages/Dashboard.jsx";
 import VoiceAssistant from "./pages/VoiceAssistant.jsx";
 import Livelihoods from "./pages/Livelihoods.jsx";
 import Training from "./pages/Training.jsx";
+import JobSearch from "./pages/JobSearch.jsx";
+import AdminPortal from "./pages/AdminPortal.jsx";
 import ComingSoon from "./pages/ComingSoon.jsx";
 
 export default function App() {
@@ -26,6 +28,8 @@ export default function App() {
           <Route path="/livelihood" element={<Livelihoods />} />
           <Route path="/skill-gap" element={<Livelihoods />} />
           <Route path="/training" element={<Training />} />
+          <Route path="/jobs" element={<JobSearch />} />
+          <Route path="/admin" element={<AdminPortal />} />
           <Route path="*" element={<ComingSoon title="Page not found" phase="n/a" description="This page does not exist." />} />
         </Routes>
       </main>

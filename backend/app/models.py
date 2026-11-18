@@ -1,158 +1,163 @@
-from datetime import date, datetime, timezone
-from typing import Optional
-
-from sqlalchemy import (
-    Boolean, Column, Date, DateTime, Float, ForeignKey, Integer, String, Table,
-    Text, UniqueConstraint,
-)
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
+from datetime import datetime, timezone
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Table, Text
+from sqlalchemy.orm import relationship
 from .database import Base
 
-
-def now() -> datetime:
-    return datetime.now(timezone.utc)
-
-
-# ---- Linking tables (many-to-many) ----
-user_skills = Table(
-    "user_skills", Base.metadata,
-    Column("user_id", ForeignKey("users.id"), primary_key=True),
-    Column("skill_id", ForeignKey("skills.id"), primary_key=True),
+user_skills_table = Table(
+    "user_skills",
+    Base.metadata,
+    Column("user_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+    Column("skill_id", Integer, ForeignKey("skills.id", ondelete="CASCADE"), primary_key=True),
 )
 
-livelihood_skills = Table(
-    "livelihood_skills", Base.metadata,
-    Column("livelihood_id", ForeignKey("livelihoods.id"), primary_key=True),
-    Column("skill_id", ForeignKey("skills.id"), primary_key=True),
+livelihood_skills_table = Table(
+    "livelihood_skills",
+    Base.metadata,
+    Column("livelihood_id", Integer, ForeignKey("livelihoods.id", ondelete="CASCADE"), primary_key=True),
+    Column("skill_id", Integer, ForeignKey("skills.id", ondelete="CASCADE"), primary_key=True),
 )
 
-training_program_skills = Table(
-    "training_program_skills", Base.metadata,
-    Column("training_program_id", ForeignKey("training_programs.id"), primary_key=True),
-    Column("skill_id", ForeignKey("skills.id"), primary_key=True),
+program_skills_table = Table(
+    "program_skills",
+    Base.metadata,
+    Column("program_id", Integer, ForeignKey("training_programs.id", ondelete="CASCADE"), primary_key=True),
+    Column("skill_id", Integer, ForeignKey("skills.id", ondelete="CASCADE"), primary_key=True),
 )
 
 
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
-    hashed_password: Mapped[str] = mapped_column(String(255))  # never plain text
-    full_name: Mapped[str] = mapped_column(String(120))
-    role: Mapped[str] = mapped_column(String(20), default="user")  # "user" or "admin"
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    full_name = Column(String(120), nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    role = Column(String(30), default="user", nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
-    profile: Mapped[Optional["UserProfile"]] = relationship(
-        back_populates="user", uselist=False, cascade="all, delete-orphan"
-    )
-    skills: Mapped[list["Skill"]] = relationship(secondary=user_skills)
-    recommendations: Mapped[list["Recommendation"]] = relationship(
-        back_populates="user", cascade="all, delete-orphan"
-    )
-    progress: Mapped[list["UserProgress"]] = relationship(
-        back_populates="user", cascade="all, delete-orphan"
-    )
+    profile = relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    skills = relationship("Skill", secondary=user_skills_table)
 
 
 class UserProfile(Base):
     __tablename__ = "user_profiles"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True)
-    age_range: Mapped[Optional[str]] = mapped_column(String(20))
-    state: Mapped[Optional[str]] = mapped_column(String(60))
-    district: Mapped[Optional[str]] = mapped_column(String(60))
-    area_type: Mapped[Optional[str]] = mapped_column(String(10))  # Rural / Urban
-    education_level: Mapped[Optional[str]] = mapped_column(String(40))
-    experience_level: Mapped[Optional[str]] = mapped_column(String(40))
-    interest_sector: Mapped[Optional[str]] = mapped_column(String(60))
-    career_preference: Mapped[Optional[str]] = mapped_column(String(40))
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=now, onupdate=now
-    )
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+    age_range = Column(String(20), nullable=True)
+    state = Column(String(60), nullable=True)
+    district = Column(String(60), nullable=True)
+    area_type = Column(String(20), nullable=True)
+    education_level = Column(String(40), nullable=True)
+    experience_level = Column(String(40), nullable=True)
+    interest_sector = Column(String(60), nullable=True)
+    career_preference = Column(String(40), nullable=True)
 
-    user: Mapped["User"] = relationship(back_populates="profile")
+    user = relationship("User", back_populates="profile")
 
 
 class Skill(Base):
     __tablename__ = "skills"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(100), unique=True, index=True)
-    category: Mapped[Optional[str]] = mapped_column(String(50))
-
-
-class Qualification(Base):
-    __tablename__ = "qualifications"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(200))
-    code: Mapped[Optional[str]] = mapped_column(String(50), unique=True)
-    nsqf_level: Mapped[Optional[int]] = mapped_column(Integer)  # NULL until verified
-    sector: Mapped[Optional[str]] = mapped_column(String(100))
-    job_role: Mapped[Optional[str]] = mapped_column(String(150))
-    entry_requirements: Mapped[Optional[str]] = mapped_column(Text)
-    training_requirements: Mapped[Optional[str]] = mapped_column(Text)
-    source: Mapped[Optional[str]] = mapped_column(String(300))
-    last_verified: Mapped[Optional[date]] = mapped_column(Date)
-    verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(120), unique=True, nullable=False, index=True)
+    category = Column(String(60), nullable=True)
 
 
 class Livelihood(Base):
     __tablename__ = "livelihoods"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    title: Mapped[str] = mapped_column(String(150), unique=True)
-    sector: Mapped[Optional[str]] = mapped_column(String(60))
-    description: Mapped[Optional[str]] = mapped_column(Text)
-    suggested_min_education: Mapped[Optional[str]] = mapped_column(String(40))
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(120), unique=True, nullable=False)
+    sector = Column(String(60), nullable=True)
+    description = Column(Text, nullable=True)
+    suggested_min_education = Column(String(40), nullable=True)
+    translations_json = Column(Text, default="{}", nullable=True)
 
-    required_skills: Mapped[list["Skill"]] = relationship(secondary=livelihood_skills)
+    required_skills = relationship("Skill", secondary=livelihood_skills_table)
+
+
+class Qualification(Base):
+    __tablename__ = "qualifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False)
+    code = Column(String(50), unique=True, nullable=False)
+    nsqf_level = Column(Integer, nullable=False)
+    sector = Column(String(60), nullable=True)
+    job_role = Column(String(120), nullable=True)
+    entry_requirements = Column(Text, nullable=True)
+    training_requirements = Column(Text, nullable=True)
+    source = Column(String(255), nullable=True)
+    last_verified = Column(String(30), nullable=True)
+    verified = Column(Boolean, default=False)
+
+    programs = relationship("TrainingProgram", back_populates="qualification")
 
 
 class TrainingProgram(Base):
     __tablename__ = "training_programs"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    title: Mapped[str] = mapped_column(String(200))
-    provider: Mapped[Optional[str]] = mapped_column(String(150))
-    mode: Mapped[Optional[str]] = mapped_column(String(30))
-    duration: Mapped[Optional[str]] = mapped_column(String(50))
-    qualification_id: Mapped[Optional[int]] = mapped_column(ForeignKey("qualifications.id"))
-    source: Mapped[Optional[str]] = mapped_column(String(300))
-    last_verified: Mapped[Optional[date]] = mapped_column(Date)
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(200), nullable=False)
+    provider = Column(String(120), nullable=True)
+    mode = Column(String(60), nullable=True)
+    duration = Column(String(60), nullable=True)
+    qualification_id = Column(Integer, ForeignKey("qualifications.id"), nullable=True)
+    source = Column(String(255), nullable=True)
+    last_verified = Column(String(30), nullable=True)
 
-    qualification: Mapped[Optional["Qualification"]] = relationship()
-    skills: Mapped[list["Skill"]] = relationship(secondary=training_program_skills)
+    qualification = relationship("Qualification", back_populates="programs")
+    skills = relationship("Skill", secondary=program_skills_table)
 
 
 class Recommendation(Base):
     __tablename__ = "recommendations"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    livelihood_id: Mapped[int] = mapped_column(ForeignKey("livelihoods.id"))
-    score: Mapped[float] = mapped_column(Float)
-    explanation: Mapped[Optional[str]] = mapped_column(Text)  # JSON text: why this was suggested
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
-
-    user: Mapped["User"] = relationship(back_populates="recommendations")
-    livelihood: Mapped["Livelihood"] = relationship()
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    livelihood_id = Column(Integer, ForeignKey("livelihoods.id", ondelete="CASCADE"), nullable=False)
+    score = Column(Float, nullable=False)
+    explanation = Column(Text, nullable=True)
 
 
 class UserProgress(Base):
     __tablename__ = "user_progress"
-    __table_args__ = (UniqueConstraint("user_id", "skill_id"),)
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"))
-    status: Mapped[str] = mapped_column(String(20), default="planned")  # planned / learning / completed
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=now, onupdate=now
-    )
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    skill_id = Column(Integer, ForeignKey("skills.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String(30), default="planned", nullable=False)
 
-    user: Mapped["User"] = relationship(back_populates="progress")
-    skill: Mapped["Skill"] = relationship()
+    skill = relationship("Skill")
+
+
+class JobPosting(Base):
+    __tablename__ = "job_postings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(160), nullable=False)
+    company = Column(String(120), nullable=False)
+    location = Column(String(120), nullable=False)
+    sector = Column(String(60), default="Technology")
+    nsqf_level = Column(String(40), default="Levels 3–4")
+    salary = Column(String(80), default="₹15,000 - ₹25,000/month")
+    description = Column(Text, default="")
+    required_skills_json = Column(Text, default="[]")
+    translations_json = Column(Text, default="{}")
+    posted_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    posted_by_name = Column(String(120), default="Verified Employer")
+    created_at = Column(String(30), default=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+
+
+class JobApplication(Base):
+    __tablename__ = "job_applications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(Integer, ForeignKey("job_postings.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    applicant_name = Column(String(120), nullable=False)
+    applicant_email = Column(String(255), nullable=False)
+    alignment_pct = Column(Integer, default=0)
+    matched_skills_json = Column(Text, default="[]")
+    created_at = Column(String(30), default=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d"))

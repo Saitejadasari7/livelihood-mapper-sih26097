@@ -1,90 +1,173 @@
-export const LANGUAGES = {
-  "en-IN": { label: "English (India)", code: "en-IN" },
-  "hi-IN": { label: "Hindi (Experimental)", code: "hi-IN" },
-};
+export function parseAnswer(step, rawText, currentProfile) {
+  const text = rawText.trim();
+  const lower = text.toLowerCase();
+  const updated = { ...currentProfile };
 
-export const QUESTIONS = [
-  {
-    key: "education_level",
-    prompt: "What is your highest education level? For example: 10th pass, Intermediate, Diploma, or Graduate.",
-  },
-  {
-    key: "skills",
-    prompt: "Which skills do you already know? For example: computer, typing, spreadsheet, communication, or customer handling.",
-  },
-  {
-    key: "interest_sector",
-    prompt: "Which sector interests you most? Technology, Business and Office, Agriculture, or Healthcare?",
-  },
-  {
-    key: "experience_level",
-    prompt: "How much work experience do you have? Fresher, 1 to 2 years, or 3 or more years?",
-  },
-  {
-    key: "career_preference",
-    prompt: "Do you prefer wage employment, self-employment, or an apprenticeship?",
-  },
-  {
-    key: "location",
-    prompt: "Which district and state are you from, and is it rural or urban?",
-  },
-];
+  // Step 0: Location (State, District, Rural/Urban)
+  if (step === 0) {
+    if (
+      lower.includes("urban") ||
+      lower.includes("city") ||
+      lower.includes("town") ||
+      text.includes("शहरी") ||
+      text.includes("పట్టణ") ||
+      text.includes("நகர") ||
+      text.includes("നഗര") ||
+      text.includes("ನಗರ")
+    ) {
+      updated.area_type = "Urban";
+    } else if (
+      lower.includes("rural") ||
+      lower.includes("village") ||
+      text.includes("ग्रामीण") ||
+      text.includes("గ్రామీణ") ||
+      text.includes("கிராம") ||
+      text.includes("ഗ്രാമ") ||
+      text.includes("ಗ್ರಾಮೀಣ")
+    ) {
+      updated.area_type = "Rural";
+    }
 
-export function extractAnswer(key, rawText) {
-  const t = rawText.toLowerCase();
+    const parts = text
+      .replace(/\b(rural|urban|village|city|town|from|in|district|state)\b/gi, "")
+      .replace(/(ग्रामीण|शहरी|గ్రామీణ|పట్టణ|கிராமப்புறம்|நகர்ப்புறம்|ഗ്രാമപ്രദേശം|നഗരപ്രദേശം|ಗ್ರಾಮೀಣ|ನಗರ)/g, "")
+      .split(/[,|-]/)
+      .map((p) => p.trim())
+      .filter(Boolean);
 
-  if (key === "education_level") {
-    if (t.includes("below") || t.includes("8th") || t.includes("9th")) return "Below 10th";
-    if (t.includes("10") || t.includes("tenth") || t.includes("ssc")) return "10th Pass";
-    if (t.includes("12") || t.includes("inter") || t.includes("plus two")) return "Intermediate";
-    if (t.includes("diploma") || t.includes("iti")) return "Diploma / ITI";
-    if (t.includes("grad") || t.includes("degree") || t.includes("btech") || t.includes("bsc") || t.includes("bcom")) return "Graduate";
-    return "Intermediate";
+    if (parts.length >= 2) {
+      updated.district = parts[0];
+      updated.state = parts[1];
+    } else if (parts.length === 1) {
+      updated.state = parts[0];
+    }
   }
 
-  if (key === "skills") {
-    const found = [];
-    if (t.includes("computer") || t.includes("basic")) found.push("Computer fundamentals");
-    if (t.includes("typ")) found.push("Typing");
-    if (t.includes("excel") || t.includes("sheet") || t.includes("spreadsheet")) found.push("Spreadsheet operations");
-    if (t.includes("data")) found.push("Data handling");
-    if (t.includes("email") || t.includes("internet")) found.push("Email and internet use");
-    if (t.includes("file") || t.includes("filing") || t.includes("record")) found.push("Filing and record keeping");
-    if (t.includes("communicat") || t.includes("speak") || t.includes("english")) found.push("Communication");
-    if (t.includes("customer") || t.includes("support") || t.includes("call")) found.push("Customer handling");
-    if (t.includes("read") || t.includes("writ")) found.push("Basic reading and writing");
-    if (t.includes("time")) found.push("Time management");
-    return found.length ? found : ["Computer fundamentals"];
+  // Step 1: Education Level (NSQF Levels 1-10)
+  if (step === 1) {
+    if (
+      lower.includes("phd") ||
+      lower.includes("ph.d") ||
+      lower.includes("postgrad") ||
+      lower.includes("master") ||
+      lower.includes("m.tech") ||
+      lower.includes("mba") ||
+      text.includes("स्नातकोत्तर") ||
+      text.includes("మాస్టర్స్") ||
+      text.includes("முதுகலை") ||
+      text.includes("ബിരുദാനന്തര") ||
+      text.includes("ಸ್ನಾತಕೋತ್ತರ")
+    ) {
+      updated.education_level = "Postgraduate / Ph.D.";
+    } else if (
+      lower.includes("grad") ||
+      lower.includes("b.tech") ||
+      lower.includes("bachelor") ||
+      lower.includes("degree") ||
+      text.includes("स्नातक") ||
+      text.includes("డిగ్రీ") ||
+      text.includes("பட்டதாரி") ||
+      text.includes("ബിരുദം") ||
+      text.includes("ಪದವಿ")
+    ) {
+      updated.education_level = "Graduate";
+    } else if (
+      lower.includes("diploma") ||
+      lower.includes("iti") ||
+      lower.includes("polytechnic") ||
+      text.includes("डिप्लोमा") ||
+      text.includes("డిప్లొమా") ||
+      text.includes("டிப்ளமோ") ||
+      text.includes("ഡിപ്ലോമ") ||
+      text.includes("ಡಿಪ್ಲೊಮಾ")
+    ) {
+      updated.education_level = "Diploma / ITI";
+    } else if (
+      lower.includes("12") ||
+      lower.includes("inter") ||
+      lower.includes("plus two") ||
+      lower.includes("+2") ||
+      text.includes("12वीं") ||
+      text.includes("ఇంటర్") ||
+      text.includes("12-ம்") ||
+      text.includes("പ്ലസ് ടു") ||
+      text.includes("ಪಿಯುಸಿ")
+    ) {
+      updated.education_level = "Intermediate";
+    } else if (
+      lower.includes("10") ||
+      lower.includes("ssc") ||
+      lower.includes("matric") ||
+      text.includes("10वीं") ||
+      text.includes("10వ") ||
+      text.includes("10-ம்") ||
+      text.includes("10-ാം") ||
+      text.includes("10ನೇ")
+    ) {
+      updated.education_level = "10th Pass";
+    } else if (
+      lower.includes("5") ||
+      lower.includes("8") ||
+      lower.includes("below") ||
+      lower.includes("basic") ||
+      text.includes("5–8") ||
+      text.includes("5-8")
+    ) {
+      updated.education_level = "Class 5-8";
+    }
   }
 
-  if (key === "interest_sector") {
-    if (t.includes("agri") || t.includes("farm")) return "Agriculture";
-    if (t.includes("health") || t.includes("medic") || t.includes("nurs")) return "Healthcare";
-    if (t.includes("busi") || t.includes("office") || t.includes("admin") || t.includes("account")) return "Business";
-    return "Technology";
+  // Step 2: Experience Level
+  if (step === 2) {
+    if (lower.includes("3") || lower.includes("4") || lower.includes("5") || lower.includes("senior")) {
+      updated.experience_level = "3+ Years";
+    } else if (lower.includes("1") || lower.includes("2")) {
+      updated.experience_level = "1-2 Years";
+    } else {
+      updated.experience_level = "Fresher";
+    }
   }
 
-  if (key === "experience_level") {
-    if (t.includes("3") || t.includes("three") || t.includes("four") || t.includes("five")) return "3+ Years";
-    if (t.includes("1") || t.includes("2") || t.includes("one") || t.includes("two")) return "1-2 Years";
-    return "Fresher";
+  // Step 3: Interest Sector
+  if (step === 3) {
+    if (lower.includes("tech") || lower.includes("it") || lower.includes("ai") || lower.includes("data") || text.includes("टेक्नोलॉजी") || text.includes("టెక్నాలజీ") || text.includes("தொழில்நுட்பம்") || text.includes("ടെക്നോളജി") || text.includes("ತಂತ್ರಜ್ಞಾನ")) {
+      updated.interest_sector = "Technology";
+    } else if (lower.includes("retail") || text.includes("रिटेल") || text.includes("రిటైల్") || text.includes("சில்லறை") || text.includes("റീട്ടെയിൽ") || text.includes("ರಿಟೇಲ್")) {
+      updated.interest_sector = "Retail";
+    } else if (lower.includes("construct") || lower.includes("mason") || text.includes("निर्माण") || text.includes("నిర్మాణం") || text.includes("கட்டுமானம்") || text.includes("നിർമ്മാണം") || text.includes("ನಿರ್ಮಾಣ")) {
+      updated.interest_sector = "Construction";
+    } else if (lower.includes("solar") || lower.includes("green") || text.includes("ग्रीन") || text.includes("సోలార్") || text.includes("பசுமை") || text.includes("ഗ്രീൻ") || text.includes("ಗ್ರೀನ್")) {
+      updated.interest_sector = "Green Jobs";
+    } else if (lower.includes("manufactur") || text.includes("मैन्युफैक्चरिंग") || text.includes("తయారీ") || text.includes("உற்பத்தி") || text.includes("നിർമ്മാണ") || text.includes("ಉತ್ಪಾದನೆ")) {
+      updated.interest_sector = "Manufacturing";
+    } else if (lower.includes("agri") || text.includes("कृषि") || text.includes("వ్యవసాయం") || text.includes("விவசாயம்") || text.includes("കൃഷി") || text.includes("ಕೃಷಿ")) {
+      updated.interest_sector = "Agriculture";
+    } else if (lower.includes("health") || text.includes("स्वास्थ्य") || text.includes("ఆరోగ్యం") || text.includes("சுகாதாரம்") || text.includes("ആരോഗ്യം") || text.includes("ಆರೋಗ್ಯ")) {
+      updated.interest_sector = "Healthcare";
+    } else if (lower.includes("business") || text.includes("व्यापार") || text.includes("వ్యాపారం") || text.includes("வணிகம்") || text.includes("ബിസിനസ്") || text.includes("ವ್ಯಾಪಾರ")) {
+      updated.interest_sector = "Business";
+    }
   }
 
-  if (key === "career_preference") {
-    if (t.includes("self") || t.includes("business") || t.includes("own")) return "Self-Employment";
-    if (t.includes("apprentice") || t.includes("train") || t.includes("intern")) return "Apprenticeship";
-    return "Employment";
+  // Step 4: Career Preference
+  if (step === 4) {
+    if (lower.includes("self") || lower.includes("own") || text.includes("स्वरोजगार") || text.includes("స్వయం") || text.includes("சுயதொழில்") || text.includes("സ്വയംതൊഴിൽ") || text.includes("ಸ್ವಯಂ")) {
+      updated.career_preference = "Self-Employment";
+    } else if (lower.includes("apprentice") || text.includes("अप्रेंटिस") || text.includes("అప్రెంటిస్") || text.includes("பயிற்சி") || text.includes("അപ്രന്റീസ്") || text.includes("ಅಪ್ರೆಂಟಿಸ್")) {
+      updated.career_preference = "Apprenticeship";
+    } else {
+      updated.career_preference = "Employment";
+    }
   }
 
-  if (key === "location") {
-    const area_type = t.includes("urban") || t.includes("city") || t.includes("town") ? "Urban" : "Rural";
-    const parts = rawText.split(/,|from|in/i).map((s) => s.trim()).filter(Boolean);
-    return {
-      district: parts[0] || "Sample District",
-      state: parts[1] || "Andhra Pradesh",
-      area_type,
-    };
+  // Step 5: Skills Extraction
+  if (step === 5) {
+    const existing = Array.isArray(updated.skills) ? updated.skills : [];
+    const items = text.split(/[,،、;]+/).map((s) => s.trim()).filter(Boolean);
+    updated.skills = Array.from(new Set([...existing, ...items]));
   }
 
-  return rawText;
+  return updated;
 }
+
+export default parseAnswer;

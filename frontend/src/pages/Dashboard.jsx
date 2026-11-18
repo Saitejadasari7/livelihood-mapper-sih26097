@@ -4,6 +4,8 @@ import api from "../services/api.js";
 import ProfileCard from "../components/ProfileCard.jsx";
 import SkillCard from "../components/SkillCard.jsx";
 import RecommendationCard from "../components/RecommendationCard.jsx";
+import { useLanguage } from "../context/LanguageContext.jsx";
+import { translateTerm, translateWithDynamic } from "../utils/dataTranslations.js";
 
 const emptyProfile = {
   age_range: "18-25",
@@ -14,13 +16,17 @@ const emptyProfile = {
   experience_level: "Fresher",
   interest_sector: "Technology",
   career_preference: "Employment",
+  skills: [],
 };
 
 export default function Dashboard() {
+  const { lang, currentLangObj, t } = useLanguage();
   const [user, setUser] = useState(null);
   const [form, setForm] = useState(emptyProfile);
+  const [skillsInput, setSkillsInput] = useState("");
   const [recs, setRecs] = useState([]);
   const [editing, setEditing] = useState(false);
+  const [showPassbook, setShowPassbook] = useState(false);
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -37,7 +43,9 @@ export default function Dashboard() {
         api.get("/recommendations"),
       ]);
       setUser(meRes.data);
-      setForm({ ...emptyProfile, ...profRes.data });
+      const merged = { ...emptyProfile, ...profRes.data };
+      setForm(merged);
+      setSkillsInput((merged.skills || []).join(", "));
       setRecs(recRes.data.recommendations || []);
     } catch {
       localStorage.removeItem("token");
@@ -53,10 +61,25 @@ export default function Dashboard() {
   async function saveProfile(e) {
     e.preventDefault();
     setMsg("");
-    await api.put("/profile", form);
+    const parsedSkills = skillsInput
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    await api.put("/profile", { ...form, skills: parsedSkills });
     await loadDashboard();
     setEditing(false);
-    setMsg("Profile saved and recommendations updated.");
+    setMsg("Profile & skills saved — recommendations updated.");
+  }
+
+  function speakTopMatch() {
+    if (!recs.length || !("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const top = recs[0];
+    const titleLocal = translateWithDynamic(top.title, lang, top.translations);
+    const summary = `${titleLocal}. ${top.nsqf_levels}. Match Score ${top.score} out of 100. ${top.next}`;
+    const utter = new SpeechSynthesisUtterance(summary);
+    utter.lang = currentLangObj.speechCode;
+    window.speechSynthesis.speak(utter);
   }
 
   function logout() {
@@ -70,11 +93,11 @@ export default function Dashboard() {
   if (!user) {
     return (
       <div className="page container center">
-        <h1>Your dashboard</h1>
-        <p>Please log in or create an account to view and save your livelihood profile.</p>
+        <h1>{t.navDashboard}</h1>
+        <p>{t.loginPromptDesc}</p>
         <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 16 }}>
-          <Link to="/login" className="btn btn-primary">Login</Link>
-          <Link to="/register" className="btn btn-outline">Register</Link>
+          <Link to="/login" className="btn btn-primary">{t.loginBtn}</Link>
+          <Link to="/register" className="btn btn-outline">{t.registerBtn}</Link>
         </div>
       </div>
     );
@@ -91,28 +114,98 @@ export default function Dashboard() {
     preference: form.career_preference || "Not set",
   };
 
+  const topRec = recs[0];
+
   return (
     <div className="page container">
       <div className="dash-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h1>Welcome, {user.full_name}</h1>
-          <p className="small">{user.email}</p>
+          <h1>{t.welcomeLabel}, {user.full_name}</h1>
+          <p className="small">{user.email} • Role: <strong>{user.role.toUpperCase()}</strong></p>
         </div>
-        <button onClick={logout} className="btn btn-outline">Logout</button>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button onClick={() => setShowPassbook(!showPassbook)} className="btn btn-primary">
+            📄 {showPassbook ? "Hide Passbook" : "Kaushal Readiness Passbook"}
+          </button>
+          <button onClick={logout} className="btn btn-outline">{t.logoutLabel}</button>
+        </div>
       </div>
 
-      {msg && <div className="alert-ok">{msg}</div>}
+      {msg && <div className="alert-ok" style={{ marginTop: 12 }}>{msg}</div>}
 
-      <div className="grid grid-2">
+      {/* Kaushal Readiness Passbook Card (Printable / PDF Export) */}
+      {showPassbook && (
+        <div
+          className="card"
+          style={{
+            marginTop: 18,
+            border: "2px solid #0f766e",
+            background: "#f8fafc",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+            <div>
+              <span className="badge" style={{ background: "#0f766e", color: "#ffffff" }}>
+                SIH26097 • OFFICIAL SKILL & NSQF SUMMARY
+              </span>
+              <h2 style={{ marginTop: 8 }}>Kaushal Readiness Passbook</h2>
+            </div>
+            <button type="button" className="btn btn-outline" onClick={() => window.print()}>
+              🖨️ Print / Save as PDF
+            </button>
+          </div>
+
+          <div className="grid grid-2" style={{ marginTop: 14 }}>
+            <div>
+              <p><strong>Learner Name:</strong> {user.full_name}</p>
+              <p><strong>Location:</strong> {form.district || "—"}, {form.state || "—"} ({form.area_type})</p>
+              <p><strong>Education Benchmark:</strong> {form.education_level}</p>
+              <p><strong>Target Sector:</strong> {form.interest_sector} ({form.career_preference})</p>
+            </div>
+            <div>
+              <p>
+                <strong>Verified Skills:</strong>{" "}
+                {(form.skills || []).map((s) => translateTerm(s, lang)).join(", ") || "None added yet"}
+              </p>
+              {topRec && (
+                <>
+                  <p>
+                    <strong>Top Matched Pathway:</strong>{" "}
+                    {translateWithDynamic(topRec.title, lang, topRec.translations)} ({topRec.score}/100)
+                  </p>
+                  <p><strong>NSQF Tier:</strong> {topRec.nsqf_levels} — {topRec.competency_tier}</p>
+                  <p><strong>Recommended Qualification:</strong> {topRec.nsqf}</p>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-2" style={{ marginTop: 20 }}>
         <div className="stack">
           {!editing ? (
             <>
               <ProfileCard profile={cardProfile} />
-              <button onClick={() => setEditing(true)} className="btn btn-outline">Edit Profile</button>
+              <div className="card">
+                <p><strong>Saved Skills ({(form.skills || []).length}):</strong></p>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                  {(form.skills || []).length > 0 ? (
+                    form.skills.map((s) => (
+                      <span key={s} className="badge" style={{ background: "#dcfce7", color: "#166534" }}>
+                        {translateTerm(s, lang)}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="small">No skills added yet. Click Edit Profile or use Voice Assistant.</span>
+                  )}
+                </div>
+              </div>
+              <button onClick={() => setEditing(true)} className="btn btn-outline">{t.editProfileLabel}</button>
             </>
           ) : (
             <form className="card" onSubmit={saveProfile}>
-              <h3 style={{ marginBottom: 14 }}>Edit your profile</h3>
+              <h3 style={{ marginBottom: 14 }}>{t.editProfileLabel}</h3>
               <div className="field">
                 <label>Age Range</label>
                 <select value={form.age_range || ""} onChange={(e) => setForm({ ...form, age_range: e.target.value })}>
@@ -177,35 +270,58 @@ export default function Dashboard() {
                   <option value="Apprenticeship">Apprenticeship / Training</option>
                 </select>
               </div>
+              <div className="field">
+                <label>Skills (comma-separated)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Computer fundamentals, Typing, Python programming"
+                  value={skillsInput}
+                  onChange={(e) => setSkillsInput(e.target.value)}
+                />
+              </div>
               <div style={{ display: "flex", gap: 10 }}>
-                <button type="submit" className="btn btn-primary">Save Profile</button>
-                <button type="button" className="btn btn-outline" onClick={() => setEditing(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">{t.saveProfileBtn}</button>
+                <button type="button" className="btn btn-outline" onClick={() => setEditing(false)}>{t.cancelLabel}</button>
               </div>
             </form>
           )}
 
           <div className="card">
-            <h3>Next step</h3>
-            <p>Use the Voice Assistant to fill or update your profile by speaking.</p>
+            <h3>{t.navVoice}</h3>
+            <p className="small">Use Voice or Traditional Form in 6 Indian languages to update your skills.</p>
             <Link to="/voice" className="btn btn-primary" style={{ marginTop: 12 }}>
-              Open Voice Assistant
+              🎙️ {t.navVoice}
             </Link>
           </div>
         </div>
 
         <div className="stack">
-          {recs.length > 0 ? (
+          {topRec ? (
             <>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button type="button" className="btn btn-outline" onClick={speakTopMatch}>
+                  🔊 Listen to Top Match ({currentLangObj.native})
+                </button>
+              </div>
               <RecommendationCard
                 rec={{
-                  title: `${recs[0].title} [${recs[0].nsqf_levels || "NSQF"}] (Match Score: ${recs[0].score}/100)`,
-                  why: recs[0].why,
-                  training: recs[0].training,
-                  nsqf: recs[0].nsqf,
-                  next: recs[0].next,
+                  title: `${translateWithDynamic(topRec.title, lang, topRec.translations)} [${topRec.nsqf_levels}] — ${topRec.score}/100`,
+                  why: topRec.why,
+                  training: topRec.training,
+                  nsqf: topRec.nsqf,
+                  next: topRec.next,
                 }}
               />
-              <SkillCard have={recs[0].have_skills} missing={recs[0].missing_skills} />
+              <SkillCard
+                have={topRec.have_skills.map((s) => translateTerm(s, lang))}
+                missing={topRec.missing_skills.map((s) => translateTerm(s, lang))}
+              />
+              {topRec.upgrade_pathway && (
+                <div className="card" style={{ background: "#f0fdf4", borderColor: "#86efac" }}>
+                  <strong>⬆️ Vertical NSQF Career Ladder → {topRec.upgrade_pathway.next_levels} ({topRec.upgrade_pathway.next_tier})</strong>
+                  <p className="small" style={{ marginTop: 6 }}>{topRec.upgrade_pathway.advice}</p>
+                </div>
+              )}
             </>
           ) : (
             <div className="card">

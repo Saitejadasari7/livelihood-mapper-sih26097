@@ -15,6 +15,35 @@ EDU_RANK = {
     "Postgraduate / Ph.D.": 6,
 }
 
+NEXT_TIER_UPGRADE = {
+    "Levels 1–2": {
+        "next_levels": "Levels 3–4",
+        "next_tier": "Semi-Skilled to Skilled",
+        "advice": "Complete Class 10 / ITI certification + digital literacy to unlock Level 3–4 roles.",
+    },
+    "Levels 3–4": {
+        "next_levels": "Levels 5–6",
+        "next_tier": "Supervisory / Technical",
+        "advice": "Pursue a Diploma / UG Year 1–2 + team supervision skills to advance to Level 5–6.",
+    },
+    "Levels 5–6": {
+        "next_levels": "Levels 7–8",
+        "next_tier": "Managerial / Specialized",
+        "advice": "Complete a Bachelor’s degree + domain analytics/management skills for Level 7–8.",
+    },
+    "Levels 7–8": {
+        "next_levels": "Levels 9–10",
+        "next_tier": "Strategic / Research",
+        "advice": "Pursue Master’s / Ph.D. research & system architecture leadership for Level 9–10.",
+    },
+    "Levels 9–10": {
+        "next_levels": "Apex Strategic Tier",
+        "next_tier": "Principal R&D / Policy Leadership",
+        "advice": "Lead national-scale R&D initiatives, patents, and sectoral skill standards.",
+    },
+}
+
+
 def get_nsqf_tier_info(edu_or_level) -> dict:
     if isinstance(edu_or_level, int):
         if edu_or_level <= 2:
@@ -38,9 +67,10 @@ def get_nsqf_tier_info(edu_or_level) -> dict:
     }
     return mapping[rank]
 
-def compute_recommendations(user: models.User, db: Session) -> list[dict]:
+
+def compute_recommendations(user: models.User, db: Session, persist: bool = False) -> list[dict]:
     profile = user.profile
-    user_skill_names = {s.name for s in user.skills}
+    user_skill_names_lower = {s.name.lower() for s in user.skills}
     livelihoods = db.scalars(select(models.Livelihood)).all()
 
     if not livelihoods:
@@ -57,7 +87,7 @@ def compute_recommendations(user: models.User, db: Session) -> list[dict]:
                 profile.interest_sector if profile else "",
                 profile.career_preference if profile else "",
                 profile.education_level if profile else "",
-                " ".join(user_skill_names),
+                " ".join(s.name for s in user.skills),
             ],
         )
     ).strip()
@@ -74,8 +104,8 @@ def compute_recommendations(user: models.User, db: Session) -> list[dict]:
 
     for idx, liv in enumerate(livelihoods):
         req_skills = [s.name for s in liv.required_skills]
-        have_skills = [s for s in req_skills if s in user_skill_names]
-        missing_skills = [s for s in req_skills if s not in user_skill_names]
+        have_skills = [s for s in req_skills if s.lower() in user_skill_names_lower]
+        missing_skills = [s for s in req_skills if s.lower() not in user_skill_names_lower]
 
         # 1. Skill overlap (0 to 45 pts)
         skill_ratio = (len(have_skills) / len(req_skills)) if req_skills else 0.0
@@ -108,8 +138,9 @@ def compute_recommendations(user: models.User, db: Session) -> list[dict]:
         tier_info = get_nsqf_tier_info(liv.suggested_min_education)
 
         for prog in matched_programs:
-            prog_skills = {s.name for s in prog.skills}
-            if prog_skills and len(prog_skills & set(req_skills)) >= 2:
+            prog_skills = {s.name.lower() for s in prog.skills}
+            req_lower = {s.lower() for s in req_skills}
+            if prog_skills and len(prog_skills & req_lower) >= 2:
                 training_text = f"{prog.title} ({prog.provider}, {prog.duration or 'Duration N/A'})"
                 if prog.qualification and prog.qualification.verified:
                     q = prog.qualification
@@ -129,22 +160,36 @@ def compute_recommendations(user: models.User, db: Session) -> list[dict]:
         if not reasons:
             reasons.append(f"Compatible with {tier_info['levels']} ({tier_info['tier']})")
 
+        try:
+            translations = json.loads(liv.translations_json or "{}")
+        except json.JSONDecodeError:
+            translations = {}
+
         results.append(
             {
                 "livelihood_id": liv.id,
                 "title": liv.title,
+                "translations": translations,
                 "sector": liv.sector,
                 "description": liv.description,
                 "suggested_min_education": liv.suggested_min_education,
                 "nsqf_levels": tier_info["levels"],
                 "competency_tier": tier_info["tier"],
                 "academic_benchmark": tier_info["benchmark"],
+                "upgrade_pathway": NEXT_TIER_UPGRADE.get(tier_info["levels"]),
                 "score": total_score,
                 "breakdown": {
                     "skills": skill_pts,
                     "sector": sector_pts,
                     "education": edu_pts,
                     "tfidf": tfidf_pts,
+                },
+                "reason_meta": {
+                    "matched_count": len(have_skills),
+                    "total_req": len(req_skills),
+                    "sector_matched": sector_pts > 0,
+                    "edu_exact": edu_pts >= 15.0,
+                    "tfidf_pts": tfidf_pts,
                 },
                 "have_skills": have_skills,
                 "missing_skills": missing_skills,
@@ -161,15 +206,17 @@ def compute_recommendations(user: models.User, db: Session) -> list[dict]:
 
     results.sort(key=lambda x: x["score"], reverse=True)
 
-    db.query(models.Recommendation).filter(models.Recommendation.user_id == user.id).delete()
-    for item in results:
-        db.add(
-            models.Recommendation(
-                user_id=user.id,
-                livelihood_id=item["livelihood_id"],
-                score=item["score"],
-                explanation=json.dumps(item["breakdown"]),
+    if persist:
+        db.query(models.Recommendation).filter(models.Recommendation.user_id == user.id).delete()
+        for item in results:
+            db.add(
+                models.Recommendation(
+                    user_id=user.id,
+                    livelihood_id=item["livelihood_id"],
+                    score=item["score"],
+                    explanation=json.dumps(item["breakdown"]),
+                )
             )
-        )
-    db.commit()
+        db.commit()
+
     return results

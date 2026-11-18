@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
 from .. import models, schemas
 from ..database import get_db
 from ..deps import get_current_user
@@ -19,6 +18,7 @@ def register(data: schemas.RegisterIn, db: Session = Depends(get_db)):
         email=email,
         full_name=data.full_name.strip(),
         hashed_password=hash_password(data.password),
+        role=data.role,
     )
     db.add(user)
     db.commit()

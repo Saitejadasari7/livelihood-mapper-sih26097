@@ -1,0 +1,77 @@
+[
+  {
+    "id": 1,
+    "title": "Junior Data Entry & MIS Executive",
+    "company": "Digital Bharat Services",
+    "location": "Vijayawada / Hybrid",
+    "sector": "Technology",
+    "nsqf_level": "Levels 3–4",
+    "salary": "₹16,000 - ₹22,000/month",
+    "description": "Manage digital records, spreadsheet verification, and daily MIS reporting.",
+    "required_skills": [
+      "Computer fundamentals",
+      "Typing",
+      "Spreadsheet operations",
+      "Data handling"
+    ],
+    "translations": {
+      "hi": "जूनियर डेटा एंट्री और एमआईएस कार्यकारी",
+      "te": "జూనియర్ డేటా ఎంట్రీ & MIS ఎగ్జిక్యూటివ్",
+      "ta": "இளநிலை டேட்டா என்ட்ரி & MIS நிர்வாகி",
+      "ml": "ജൂനിയർ ഡാറ്റ എൻട്രി & MIS എക്സിക്യൂട്ടീവ്",
+      "kn": "ಜೂನಿಯರ್ ಡೇಟಾ ಎಂಟ್ರಿ ಮತ್ತು MIS ಕಾರ್ಯನಿರ್ವಾಹಕ"
+    },
+    "posted_by": "System Verified Employer",
+    "created_at": "2026-11-18"
+  },
+  {
+    "id": 2,
+    "title": "Rooftop Solar PV Field Technician",
+    "company": "SuryaShakti Green Energy",
+    "location": "Hyderabad / Rural Clusters",
+    "sector": "Green Jobs",
+    "nsqf_level": "Levels 3–4",
+    "salary": "₹18,000 - ₹26,000/month",
+    "description": "Install, wire, and test residential and agricultural solar PV systems.",
+    "required_skills": [
+      "Electrical basics",
+      "Solar panel mounting",
+      "Safety compliance",
+      "Site testing"
+    ],
+    "translations": {
+      "hi": "रूफटॉप सोलर पीवी फील्ड तकनीशियन",
+      "te": "రూఫ్‌టాప్ సోలార్ PV ఫీల్డ్ టెక్నీషియన్",
+      "ta": "சோலார் PV களத் தொழில்நுட்ப வல்லுநர்",
+      "ml": "റൂഫ്‌ടോപ്പ് സോളാർ PV ഫീల్ഡ് ടെക്നീഷ്യൻ",
+      "kn": "ರೂಫ್‌ಟಾಪ್ ಸೋಲಾರ್ PV ಫೀಲ್ಡ್ ತಂತ್ರಜ್ಞ"
+    },
+    "posted_by": "System Verified Employer",
+    "created_at": "2026-11-18"
+  },
+  {
+    "id": 3,
+    "title": "Associate AI & Data Analyst",
+    "company": "KaushalTech Analytics",
+    "location": "Bengaluru / Remote",
+    "sector": "Technology",
+    "nsqf_level": "Levels 7–8",
+    "salary": "₹45,000 - ₹70,000/month",
+    "description": "Build SQL data pipelines, Python ML models, and operational dashboards.",
+    "required_skills": [
+      "Python programming",
+      "Data analysis",
+      "Machine learning basics",
+      "SQL queries"
+    ],
+    "translations": {
+      "hi": "एसोसिएट एआई और डेटा विश्लेषक",
+      "te": "అసోసియేట్ AI & డేటా అనలిస్ట్",
+      "ta": "இணை AI & தரவு ஆய்வாளர்",
+      "ml": "അസോസിയേറ്റ് AI & ഡാറ്റ അനലിസ്റ്റ്",
+      "kn": "ಅಸೋಸಿಯೇಟ್ AI ಮತ್ತು ಡೇಟಾ ವಿಶ್ಲೇಷಕ"
+    },
+    "posted_by": "System Verified Employer",
+    "created_at": "2026-11-18"
+  }
+]
