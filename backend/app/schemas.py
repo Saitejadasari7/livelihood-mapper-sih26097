@@ -1,12 +1,30 @@
+import re
 from typing import Literal, Optional
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
+
+
+def normalize_phone(raw: Optional[str]) -> Optional[str]:
+    if not raw or not raw.strip():
+        return None
+    digits = re.sub(r"\D", "", raw.strip())
+    if digits.startswith("91") and len(digits) == 12:
+        digits = digits[2:]
+    if len(digits) != 10:
+        raise ValueError("Please enter a valid 10-digit mobile number")
+    return digits
 
 
 class RegisterIn(BaseModel):
     full_name: str = Field(min_length=2, max_length=120)
-    email: EmailStr
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
     password: str = Field(min_length=8)
     role: Literal["user", "admin"] = "user"
+
+    @field_validator("phone")
+    @classmethod
+    def check_phone(cls, v: Optional[str]) -> Optional[str]:
+        return normalize_phone(v)
 
     @field_validator("password")
     @classmethod
@@ -15,10 +33,25 @@ class RegisterIn(BaseModel):
             raise ValueError("Password must be at most 72 bytes long")
         return v
 
+    @model_validator(mode="after")
+    def require_email_or_phone(self):
+        if not self.email and not self.phone:
+            raise ValueError("Please provide either an Email address or a 10-digit Mobile Number")
+        return self
+
 
 class LoginIn(BaseModel):
-    email: EmailStr
+    identifier: Optional[str] = None
+    email: Optional[str] = None
     password: str
+
+    @model_validator(mode="after")
+    def resolve_identifier(self):
+        val = (self.identifier or self.email or "").strip()
+        if not val:
+            raise ValueError("Please enter your Email or Mobile Number")
+        self.identifier = val
+        return self
 
 
 class TokenOut(BaseModel):
@@ -29,7 +62,8 @@ class TokenOut(BaseModel):
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    email: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
     full_name: str
     role: str
 

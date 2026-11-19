@@ -30,7 +30,9 @@ def _seed_default_jobs_if_empty(db: Session) -> None:
             nsqf_level="Levels 3–4",
             salary="₹16,000 - ₹22,000/month",
             description="Manage digital records, spreadsheet verification, and daily MIS reporting.",
-            required_skills_json=json.dumps(["Computer fundamentals", "Typing", "Spreadsheet operations", "Data handling"]),
+            required_skills_json=json.dumps(
+                ["Computer fundamentals", "Typing", "Spreadsheet operations", "Data handling"]
+            ),
             translations_json=json.dumps(
                 {
                     "hi": "जूनियर डेटा एंट्री और एमआईएस कार्यकारी",
@@ -51,7 +53,9 @@ def _seed_default_jobs_if_empty(db: Session) -> None:
             nsqf_level="Levels 3–4",
             salary="₹18,000 - ₹26,000/month",
             description="Install, wire, and test residential and agricultural solar PV systems.",
-            required_skills_json=json.dumps(["Electrical basics", "Solar panel mounting", "Safety compliance", "Site testing"]),
+            required_skills_json=json.dumps(
+                ["Electrical basics", "Solar panel mounting", "Safety compliance", "Site testing"]
+            ),
             translations_json=json.dumps(
                 {
                     "hi": "रूफटॉप सोलर पीवी फील्ड तकनीशियन",
@@ -72,7 +76,9 @@ def _seed_default_jobs_if_empty(db: Session) -> None:
             nsqf_level="Levels 7–8",
             salary="₹45,000 - ₹70,000/month",
             description="Build SQL data pipelines, Python ML models, and operational dashboards.",
-            required_skills_json=json.dumps(["Python programming", "Data analysis", "Machine learning basics", "SQL queries"]),
+            required_skills_json=json.dumps(
+                ["Python programming", "Data analysis", "Machine learning basics", "SQL queries"]
+            ),
             translations_json=json.dumps(
                 {
                     "hi": "एसोसिएट एआई और डेटा विश्लेषक",
@@ -160,11 +166,13 @@ def apply_to_job(
     matched = [s for s in req_skills if s.lower() in user_skills_lower]
     alignment_pct = round((len(matched) / len(req_skills)) * 100) if req_skills else 100
 
+    contact_display = user.email or (f"+91-{user.phone}" if user.phone else "N/A")
+
     app_record = models.JobApplication(
         job_id=job.id,
         user_id=user.id,
         applicant_name=user.full_name,
-        applicant_email=user.email,
+        applicant_email=contact_display,
         alignment_pct=alignment_pct,
         matched_skills_json=json.dumps(matched),
     )

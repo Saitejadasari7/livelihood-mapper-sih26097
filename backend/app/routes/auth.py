@@ -1,3 +1,4 @@
+import re
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -11,11 +12,18 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 @router.post("/register", response_model=schemas.UserOut, status_code=status.HTTP_201_CREATED)
 def register(data: schemas.RegisterIn, db: Session = Depends(get_db)):
-    email = data.email.lower()
-    if db.scalar(select(models.User).where(models.User.email == email)):
+    email = data.email.lower() if data.email else None
+    phone = data.phone
+
+    if email and db.scalar(select(models.User).where(models.User.email == email)):
         raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists")
+
+    if phone and db.scalar(select(models.User).where(models.User.phone == phone)):
+        raise HTTPException(status.HTTP_409_CONFLICT, "An account with this mobile number already exists")
+
     user = models.User(
         email=email,
+        phone=phone,
         full_name=data.full_name.strip(),
         hashed_password=hash_password(data.password),
         role=data.role,
@@ -28,9 +36,20 @@ def register(data: schemas.RegisterIn, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=schemas.TokenOut)
 def login(data: schemas.LoginIn, db: Session = Depends(get_db)):
-    user = db.scalar(select(models.User).where(models.User.email == data.email.lower()))
+    ident = data.identifier.strip()
+    user = None
+
+    if "@" in ident:
+        user = db.scalar(select(models.User).where(models.User.email == ident.lower()))
+    else:
+        digits = re.sub(r"\D", "", ident)
+        if digits.startswith("91") and len(digits) == 12:
+            digits = digits[2:]
+        user = db.scalar(select(models.User).where(models.User.phone == digits))
+
     if user is None or not verify_password(data.password, user.hashed_password):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect email or password")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect email/mobile number or password")
+
     return schemas.TokenOut(access_token=create_access_token(user.id))
 
 
