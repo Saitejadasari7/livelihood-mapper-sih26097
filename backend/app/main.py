@@ -1,14 +1,22 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import inspect, text
 from . import models  # noqa: F401
 from .database import Base, engine
 from .init_db import main as seed_db
 from .routes import auth, catalogue, jobs_admin, profile, recommendations
 
-Base.metadata.create_all(engine)
+inspector = inspect(engine)
+if "users" in inspector.get_table_names():
+    cols = {c["name"] for c in inspector.get_columns("users")}
+    if "phone" not in cols:
+        with engine.connect() as conn:
+            conn.execute(text("PRAGMA foreign_keys=OFF"))
+            conn.commit()
+        Base.metadata.drop_all(engine)
 
-# Auto-seed verified NSQF qualifications, livelihoods, skills, and programs
+Base.metadata.create_all(engine)
 seed_db()
 
 app = FastAPI(title="Livelihood Mapping API")
