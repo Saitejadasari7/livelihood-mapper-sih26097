@@ -2,17 +2,14 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from . import models  # noqa: F401
-from .database import Base, SessionLocal, engine
-from .init_db import load_livelihoods, load_qualifications_and_programs, load_skills
+from .database import Base, engine
+from .init_db import main as seed_db
 from .routes import auth, catalogue, jobs_admin, profile, recommendations
 
 Base.metadata.create_all(engine)
 
-# Auto-seed verified NSQF data on cold cloud start if empty
-with SessionLocal() as db:
-    load_skills(db)
-    load_livelihoods(db)
-    load_qualifications_and_programs(db)
+# Auto-seed verified NSQF qualifications, livelihoods, skills, and programs
+seed_db()
 
 app = FastAPI(title="Livelihood Mapping API")
 
